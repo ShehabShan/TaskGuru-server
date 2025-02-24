@@ -16,6 +16,7 @@ const allowedOrigins = [
   "https://taskguru-b25e4.web.app",
   "https://taskguru-b25e4.firebaseapp.com",
   "https://*.railway.app",
+  "https://taskguru-server-production.up.railway.app",
 ];
 
 app.use(
@@ -28,7 +29,9 @@ app.use(
 app.use(express.json());
 
 // const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.d6z2i.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.d6z2i.mongodb.net/?retryWrites=true&w=majority&authSource=admin`;
+// const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.d6z2i.mongodb.net/?retryWrites=true&w=majority&authSource=admin`;
+
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.d6z2i.mongodb.net/taskManagementApp?retryWrites=true&w=majority&authSource=admin`;
 
 const client = new MongoClient(uri, {
   serverApi: {
@@ -38,6 +41,8 @@ const client = new MongoClient(uri, {
   },
   maxPoolSize: 10, // Connection pooling optimized for Railway
   minPoolSize: 2,
+  tls: true,
+  tlsAllowInvalidCertificates: false,
 });
 
 const httpServer = createServer(app);
@@ -49,6 +54,7 @@ const io = new Server(httpServer, {
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
   },
+  path: "/socket.io",
   transports: ["websocket", "polling"], // Railway-compatible transports
   pingTimeout: 60000,
   pingInterval: 25000,
@@ -62,6 +68,10 @@ async function connectDB() {
   if (isConnected) return;
   try {
     await client.connect();
+
+    await client.db("admin").command({ ping: 1 });
+    console.log("Pinged deployment. Successfully connected to MongoDB!");
+
     db = client.db("taskManagementApp");
     isConnected = true;
     console.log("MongoDB connected successfully");
@@ -186,9 +196,12 @@ async function initializeServer() {
 
     // Health check endpoint
     app.get("/", (req, res) => {
+      const mongoStatus = client.topology.isConnected()
+        ? "connected"
+        : "disconnected";
       res.json({
         status: "ok",
-        mongo: isConnected ? "connected" : "disconnected",
+        mongo: mongoStatus,
         websockets: io.engine.clientsCount,
       });
     });
@@ -196,6 +209,7 @@ async function initializeServer() {
     // Server lifecycle handlers
     httpServer.listen(port, () => {
       console.log(`Server running on port ${port}`);
+      console.log(`WebSocket path: /socket.io`);
     });
   } catch (error) {
     console.error("Server initialization failed:", error);
