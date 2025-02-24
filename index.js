@@ -15,7 +15,7 @@ const allowedOrigins = [
   "http://localhost:5173",
   "https://taskguru-b25e4.web.app",
   "https://taskguru-b25e4.firebaseapp.com",
-  "https://*.railway.app", // Allow all Railway subdomains
+  "https://*.railway.app",
 ];
 
 app.use(
@@ -27,7 +27,8 @@ app.use(
 );
 app.use(express.json());
 
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.d6z2i.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
+// const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.d6z2i.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.d6z2i.mongodb.net/?retryWrites=true&w=majority&authSource=admin`;
 
 const client = new MongoClient(uri, {
   serverApi: {
