@@ -54,10 +54,10 @@ const io = new Server(httpServer, {
     credentials: true,
   },
   path: "/socket.io",
-  transports: ["websocket", "polling"], // Railway-compatible transports
+  transports: ["websocket", "polling"],
   pingTimeout: 60000,
   pingInterval: 25000,
-  connectionStateRecovery: {}, // Added for better WS recovery
+  connectionStateRecovery: {},
 });
 
 let db;
@@ -95,15 +95,26 @@ async function initializeServer() {
   try {
     await connectDB();
 
-    // API Endpoints
+    const usersCollection = db.collection("users");
+    const tasksCollection = db.collection("tasks");
+
+   
     app.post("/users", async (req, res) => {
+      const user = req.body;
+      const query = { email: user.email };
+
       try {
-        const user = req.body;
-        const usersCollection = db.collection("users");
+        const existingUser = await usersCollection.findOne(query);
+
+        if (existingUser) {
+          return res.send({ message: "user already exist", insertedId: null });
+        }
+
         const result = await usersCollection.insertOne(user);
         res.status(201).json(result);
+        res;
       } catch (error) {
-        res.status(500).json({ error: "User creation failed" });
+        res.status(500).json({ error: error.message });
       }
     });
 
@@ -124,7 +135,7 @@ async function initializeServer() {
     app.post("/tasks", async (req, res) => {
       try {
         const task = req.body;
-        const tasksCollection = db.collection("tasks");
+
         const result = await tasksCollection.insertOne(task);
 
         if (result.insertedId) {
